@@ -65,6 +65,7 @@ def scrape_ieee():
                     except Exception as e:
                         print(f"Error al procesar un resultado: {e}")
 
+                print(f"Los artículos se guardaron exitosamente en {filepath}")
         except Exception as e:
             print(f"Error general: {e}")
         finally:
