@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os
+import re
 
 def scrape_springer_open():
     with sync_playwright() as p:
@@ -58,7 +59,14 @@ def scrape_springer_open():
 
                         # Extraer año
                         year_element = article.query_selector("span[data-test='published-on']")
-                        year = year_element.inner_text().strip() if year_element else "Unknown"
+                        if year_element:
+                          # Obtener el texto del elemento
+                          year_text = year_element.inner_text()
+                          # Usar una expresión regular para extraer el año (cuatro dígitos consecutivos)
+                          match = re.search(r'\b\d{4}\b', year_text)
+                          year = match.group(0) if match else "Unknown"
+                        else:
+                          year = "Unknown"
 
                         # Extraer revista
                         journal_element = article.query_selector("em[data-test='journal-title']")

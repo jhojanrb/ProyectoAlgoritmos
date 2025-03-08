@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os
+import re
 
 def scrape_acm():
     # Crear la carpeta "Data" si no existe
@@ -35,7 +36,13 @@ def scrape_acm():
                         link = result.query_selector(".hlFld-Title a").get_attribute("href") if result.query_selector(".hlFld-Title a") else "Unknown"
 
                         authors = result.query_selector(".rlist--inline").inner_text() if result.query_selector(".rlist--inline") else "Unknown"
-                        year = result.query_selector(".bookPubDate").inner_text() if result.query_selector(".bookPubDate") else "Unknown"
+                        year_element = result.query_selector(".bookPubDate")
+                        if year_element:
+                          # Usar una expresión regular para extraer el año (cuatro dígitos consecutivos)
+                          match = re.search(r'\b\d{4}\b', year_element.inner_text())
+                          year = match.group(0) if match else "Unknown"
+                        else:
+                          year = "Unknown"
                         journal = result.query_selector(".issue-item__detail").inner_text() if result.query_selector(".issue-item__detail") else "Unknown"
                         abstract = result.query_selector(".issue-item__abstract").inner_text() if result.query_selector(".issue-item__abstract") else "Unknown"
 
