@@ -39,8 +39,8 @@ def scrape_ieee():
                         url = f"https://ieeexplore.ieee.org{link}"
 
                         # Procesar autores, año y journal
-                        author_element = result.query_selector(".author text-base-md-lh")  # Ajusta si es necesario
-                        authors = author_element.inner_text() if author_element else "Unknown"
+                        author_element = result.query_selector(".text-base-md-lh")  # Ajusta si es necesario
+                        authors = author_element.inner_text().replace("\n", " ").strip() if author_element else "Unknown"
 
                         year_element = result.query_selector(".publisher-info-container")
                         year = year_element.inner_text() if year_element else "Unknown"
@@ -49,7 +49,7 @@ def scrape_ieee():
                         journal = journal_element.inner_text() if journal_element else "Unknown"
 
                         abstract_element = result.query_selector(".twist-container")
-                        abstact = abstract_element.inner_text() if abstract_element else "Unknown"
+                        abstract = abstract_element.inner_text() if abstract_element else "Unknown"
 
                         # Escribir en formato BibTeX
                         file.write(f"@article{{ref{i},\n")
@@ -57,7 +57,7 @@ def scrape_ieee():
                         file.write(f"  author = {{{authors}}},\n")
                         file.write(f"  year = {{{year}}},\n")
                         file.write(f"  journal = {{{journal}}},\n")
-                        file.write(f"  abstact = {{{abstact}}},\n")
+                        file.write(f"  abstract = {{{abstract}}},\n")
                         file.write(f"  url = {{{url}}}\n")
                         file.write("}\n\n")
 
