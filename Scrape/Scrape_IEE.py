@@ -1,16 +1,18 @@
 from playwright.sync_api import sync_playwright
 import os
 import re
+import time
 
 def scrape_ieee():
     with sync_playwright() as p:
+        start_time = time.time()
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
 
         try:
             # Acceder a IEEE Xplore
             page.goto("https://ieeexplore.ieee.org/")
-            page.wait_for_load_state("domcontentloaded")
+            page.wait_for_load_state("domcontentloaded")  # Esperar que el DOM esté listo
 
             # Buscar el término deseado
             search_selector = 'input[type="search"]'
@@ -22,11 +24,14 @@ def scrape_ieee():
             page.wait_for_selector(".List-results-items", timeout=60000)
 
             # Cambiar a mostrar 100 resultados por página
-            items_per_page_button = page.locator('button:has-text("Items Per Page")')
-            items_per_page_button.click()
-            option_100 = page.locator('button:has-text("100")')
-            option_100.click()
-            page.wait_for_timeout(5000)
+            try:
+                items_per_page_button = page.locator('button:has-text("Items Per Page")')
+                items_per_page_button.click()
+                option_100 = page.locator('button:has-text("100")')
+                option_100.click()
+                page.wait_for_timeout(5000)
+            except Exception as e:
+                print(f"No se pudo cambiar a 100 resultados por página: {e}")
 
             # Crear el archivo para guardar los resultados
             os.makedirs("Data", exist_ok=True)
@@ -53,6 +58,9 @@ def scrape_ieee():
                             author_element = result.query_selector(".text-base-md-lh")
                             authors = author_element.inner_text().replace("\n", " ").strip() if author_element else "Unknown"
 
+                            journal_element = result.query_selector(".fw-bold")
+                            journal = journal_element.inner_text() if journal_element else "Unknown"
+
                             year_element = result.query_selector(".publisher-info-container")
                             if year_element:
                                 year_text = year_element.inner_text()
@@ -60,9 +68,6 @@ def scrape_ieee():
                                 year = match.group(0) if match else "Unknown"
                             else:
                                 year = "Unknown"
-
-                            journal_element = result.query_selector(".fw-bold")
-                            journal = journal_element.inner_text() if journal_element else "Unknown"
 
                             abstract_element = result.query_selector(".twist-container")
                             abstract = abstract_element.inner_text() if abstract_element else "Unknown"
@@ -80,7 +85,7 @@ def scrape_ieee():
                         except Exception as e:
                             print(f"Error al procesar un resultado: {e}")
 
-                    # Intentar ir a la siguiente página o hacer clic en "Next" después de la página 10
+                    # Intentar ir a la siguiente página
                     try:
                         if current_page == 10:
                             print("Cargando las siguientes 10 páginas...")
@@ -98,7 +103,7 @@ def scrape_ieee():
                                 next_page_button.click()
                                 page.wait_for_timeout(5000)
                             else:
-                                print(f"Ya se alcanzó el limite")
+                                print("Ya se alcanzó el límite.")
                                 break
 
                         current_page += 1
@@ -106,10 +111,14 @@ def scrape_ieee():
                         print(f"No se pudo ir a la página {current_page + 1}: {e}")
                         break
 
-            print(f"Los artículos se guardaron exitosamente en {filepath}")
+                print(f"Los artículos se guardaron exitosamente en {filepath}")
+
         except Exception as e:
             print(f"Error general: {e}")
         finally:
+            print("Los artículos de la base IEEE se guardaron exitosamente")
             browser.close()
+            end_time = time.time()
+            print(f"Scraper para Springer finalizado en {end_time - start_time:.2f} segundos.\n")
 
 scrape_ieee()

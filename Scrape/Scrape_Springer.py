@@ -1,9 +1,11 @@
 from playwright.sync_api import sync_playwright
 import os
 import re
+import time
 
 def scrape_springer_open():
     with sync_playwright() as p:
+        start_time = time.time()
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
 
@@ -17,7 +19,7 @@ def scrape_springer_open():
             if cookies_button:
                 cookies_button.click()
                 print("Cookies aceptadas.")
-                
+
             # Hacer clic en el botón de búsqueda
             search_button_selector = 'button[data-test="header-search-button"]'
             page.wait_for_selector(search_button_selector, timeout=10000)
@@ -31,6 +33,11 @@ def scrape_springer_open():
 
             # Esperar que los resultados se carguen
             page.wait_for_selector("article.c-listing__content", timeout=20000)
+            articles = page.query_selector_all("article.c-listing__content")
+
+            if not articles:
+                print("No se encontraron artículos. Revisa los selectores.")
+                return
 
             # Guardar resultados en un archivo BibTeX
             filepath = os.path.join("Data", "resultados_springer_open.bib")
@@ -41,7 +48,7 @@ def scrape_springer_open():
                 while page_number <= 100:  # Iterar hasta la página 100
                     print(f"Procesando página {page_number}...")
                     articles = page.query_selector_all("article.c-listing__content")
-                    
+
                     for i, article in enumerate(articles):
                         try:
                             # Extraer título
@@ -72,7 +79,7 @@ def scrape_springer_open():
 
                             # Extraer abstract
                             abstract_element = article.query_selector("p")
-                            abstract = abstract_element.inner_text().strip() if journal_element else "Unknown"
+                            abstract = abstract_element.inner_text().strip() if abstract_element else "Unknown"
 
                             # Escribir en formato BibTeX
                             file.write(f"@article{{ref{page_number}_{i},\n")
@@ -86,14 +93,14 @@ def scrape_springer_open():
 
                         except Exception as e:
                             print(f"Error al procesar un artículo: {e}")
-                    
+
                     # Ir a la siguiente página
                     try:
                         next_button = page.query_selector('a[data-test="next-page"]')
                         if next_button and next_button.is_visible():
                             next_button.click()
                             page.wait_for_load_state("domcontentloaded")
-                            page.wait_for_timeout(3000) #esperar 3 segundos para pasar a la otra pagina
+                            page.wait_for_timeout(3000)  # Esperar 3 segundos para cargar la siguiente página
                             page_number += 1
                         else:
                             print("No hay más páginas disponibles.")
@@ -107,5 +114,7 @@ def scrape_springer_open():
             print(f"Error general: {e}")
         finally:
             browser.close()
+            end_time = time.time()
+            print(f"Scraper para Springer finalizado en {end_time - start_time:.2f} segundos.\n")
 
 scrape_springer_open()
