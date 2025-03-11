@@ -31,63 +31,76 @@ def scrape_springer_open():
 
             # Esperar que los resultados se carguen
             page.wait_for_selector("article.c-listing__content", timeout=20000)
-            articles = page.query_selector_all("article.c-listing__content")
-
-            if not articles:
-                print("No se encontraron artículos. Revisa los selectores.")
-                return
 
             # Guardar resultados en un archivo BibTeX
             filepath = os.path.join("Data", "resultados_springer_open.bib")
             os.makedirs("Data", exist_ok=True)
 
             with open(filepath, mode="w", encoding="utf-8") as file:
-                for i, article in enumerate(articles):
+                page_number = 1
+                while page_number <= 100:  # Iterar hasta la página 100
+                    print(f"Procesando página {page_number}...")
+                    articles = page.query_selector_all("article.c-listing__content")
+                    
+                    for i, article in enumerate(articles):
+                        try:
+                            # Extraer título
+                            title_element = article.query_selector("h3.c-listing__title a[data-test='title-link']")
+                            title = title_element.inner_text().strip() if title_element else "Unknown"
+
+                            # Extraer enlace
+                            link = title_element.get_attribute("href") if title_element else "Unknown"
+                            if link and not link.startswith("http"):
+                                link = f"https://www.springeropen.com{link}"
+
+                            # Extraer autores
+                            authors_element = article.query_selector("div.c-listing__authors")
+                            authors = authors_element.inner_text().strip().replace("Authors:", "").strip() if authors_element else "Unknown"
+
+                            # Extraer año
+                            year_element = article.query_selector("span[data-test='published-on']")
+                            if year_element:
+                                year_text = year_element.inner_text()
+                                match = re.search(r'\b\d{4}\b', year_text)
+                                year = match.group(0) if match else "Unknown"
+                            else:
+                                year = "Unknown"
+
+                            # Extraer revista
+                            journal_element = article.query_selector("em[data-test='journal-title']")
+                            journal = journal_element.inner_text().strip() if journal_element else "Unknown"
+
+                            # Extraer abstract
+                            abstract_element = article.query_selector("p")
+                            abstract = abstract_element.inner_text().strip() if journal_element else "Unknown"
+
+                            # Escribir en formato BibTeX
+                            file.write(f"@article{{ref{page_number}_{i},\n")
+                            file.write(f"  title = {{{title}}},\n")
+                            file.write(f"  author = {{{authors}}},\n")
+                            file.write(f"  year = {{{year}}},\n")
+                            file.write(f"  journal = {{{journal}}},\n")
+                            file.write(f"  abstract = {{{abstract}}},\n")
+                            file.write(f"  url = {{{link}}}\n")
+                            file.write("}\n\n")
+
+                        except Exception as e:
+                            print(f"Error al procesar un artículo: {e}")
+                    
+                    # Ir a la siguiente página
                     try:
-                        # Extraer título
-                        title_element = article.query_selector("h3.c-listing__title a[data-test='title-link']")
-                        title = title_element.inner_text().strip() if title_element else "Unknown"
-
-                        # Extraer enlace
-                        link = title_element.get_attribute("href") if title_element else "Unknown"
-                        if link and not link.startswith("http"):
-                            link = f"https://www.springeropen.com{link}"
-
-                        # Extraer autores
-                        authors_element = article.query_selector("div.c-listing__authors")
-                        authors = authors_element.inner_text().strip().replace("Authors:", "").strip() if authors_element else "Unknown"
-
-                        # Extraer año
-                        year_element = article.query_selector("span[data-test='published-on']")
-                        if year_element:
-                          # Obtener el texto del elemento
-                          year_text = year_element.inner_text()
-                          # Usar una expresión regular para extraer el año (cuatro dígitos consecutivos)
-                          match = re.search(r'\b\d{4}\b', year_text)
-                          year = match.group(0) if match else "Unknown"
+                        next_button = page.query_selector('a[data-test="next-page"]')
+                        if next_button and next_button.is_visible():
+                            next_button.click()
+                            page.wait_for_load_state("domcontentloaded")
+                            page.wait_for_timeout(3000) #esperar 3 segundos para pasar a la otra pagina
+                            page_number += 1
                         else:
-                          year = "Unknown"
-
-                        # Extraer revista
-                        journal_element = article.query_selector("em[data-test='journal-title']")
-                        journal = journal_element.inner_text().strip() if journal_element else "Unknown"
-
-                        # Extraer abstract
-                        abstract_element = article.query_selector("p")
-                        abstract = abstract_element.inner_text().strip() if journal_element else "Unknown"
-
-                        # Escribir en formato BibTeX
-                        file.write(f"@article{{ref{i},\n")
-                        file.write(f"  title = {{{title}}},\n")
-                        file.write(f"  author = {{{authors}}},\n")
-                        file.write(f"  year = {{{year}}},\n")
-                        file.write(f"  journal = {{{journal}}},\n")
-                        file.write(f"  abstract = {{{abstract}}},\n")
-                        file.write(f"  url = {{{link}}}\n")
-                        file.write("}\n\n")
-
+                            print("No hay más páginas disponibles.")
+                            break
                     except Exception as e:
-                        print(f"Error al procesar un artículo: {e}")
+                        print(f"Error al intentar ir a la página siguiente: {e}")
+                        break
 
                 print(f"Los artículos se guardaron exitosamente en {filepath}")
         except Exception as e:
