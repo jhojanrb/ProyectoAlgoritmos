@@ -45,7 +45,7 @@ def scrape_springer_open():
 
             with open(filepath, mode="w", encoding="utf-8") as file:
                 page_number = 1
-                while page_number <= 100:  # Iterar hasta la página 100
+                while page_number <= 136:  # Iterar hasta la página 100
                     print(f"Procesando página {page_number}...")
                     articles = page.query_selector_all("article.c-listing__content")
 
