@@ -38,10 +38,13 @@ def scrape_ieee():
             filepath = os.path.join("Data", "resultados_ieee.bib")
             with open(filepath, mode="w", encoding="utf-8") as file:
                 current_page = 1
-                while current_page <= 20:  # Iterar hasta la página 20
+                MAX_PAGE = 45
+
+                while current_page <= MAX_PAGE:  # Iterar hasta el límite de página
                     print(f"Procesando página {current_page}...")
 
                     # Procesar los resultados actuales
+                    page.wait_for_selector(".List-results-items", timeout=60000)
                     results = page.query_selector_all(".List-results-items")
                     for i, result in enumerate(results):
                         try:
@@ -87,12 +90,13 @@ def scrape_ieee():
 
                     # Intentar ir a la siguiente página
                     try:
-                        if current_page == 10:
+                        if current_page in [10, 20, 30, 40]:
                             print("Cargando las siguientes 10 páginas...")
                             next_button = page.locator('li.next-page-set button:has-text("Next")')
                             if next_button.is_visible():
                                 next_button.click()
                                 page.wait_for_timeout(5000)
+                                page.wait_for_selector(".List-results-items", timeout=60000)
                             else:
                                 print("El botón 'Next' no está disponible.")
                                 break
@@ -102,6 +106,7 @@ def scrape_ieee():
                             if next_page_button.is_visible():
                                 next_page_button.click()
                                 page.wait_for_timeout(5000)
+                                page.wait_for_selector(".List-results-items", timeout=60000)
                             else:
                                 print("Ya se alcanzó el límite.")
                                 break
@@ -119,6 +124,6 @@ def scrape_ieee():
             print("Los artículos de la base IEEE se guardaron exitosamente")
             browser.close()
             end_time = time.time()
-            print(f"Scraper para Springer finalizado en {end_time - start_time:.2f} segundos.\n")
+            print(f"Scraper finalizado en {end_time - start_time:.2f} segundos.")
 
 scrape_ieee()
