@@ -95,7 +95,7 @@ def scrape_acm():
                             next_button = page.query_selector(".pagination__btn--next")
                             if next_button:
                                 next_button.click()
-                                time.sleep(3)  # Esperar 3 segundos antes de cargar la siguiente página
+                                time.sleep(6)  # Esperar 3 segundos antes de cargar la siguiente página
                                 page.wait_for_load_state("domcontentloaded", timeout=90000)  # Incrementar el tiempo de espera
                                 break
                             else:
