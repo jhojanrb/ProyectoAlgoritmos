@@ -124,7 +124,7 @@ def scrape_sage():
             # Guardar resultados en un archivo BibTeX
             filepath = os.path.join("Data", "resultados_Sage.bib")
             with open(filepath, mode="w", encoding="utf-8") as file:
-                for page_num in range(1, 11):  # Iterar hasta la página 11
+                for page_num in range(1, 5000):  # Iterar hasta la página 5000
                     print(f"Procesando página {page_num}...")
 
                     # Revalidar que los resultados están disponibles

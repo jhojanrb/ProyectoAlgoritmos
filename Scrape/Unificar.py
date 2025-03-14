@@ -112,4 +112,4 @@ def save_duplicates(filename, duplicates):
 
 
 # Ejemplo de uso
-unify_results_from_files("Data/resultados_ACM.bib", "Data/resultados_ieee.bib", "Data/resultados_springer_open.bib")
+unify_results_from_files("Data/resultados_ACM.bib", "Data/resultados_ieee.bib", "Data/resultados_springer_open.bib", "Data/resultados_Sage.bib", "Data/resultados_Scopus.bib")
