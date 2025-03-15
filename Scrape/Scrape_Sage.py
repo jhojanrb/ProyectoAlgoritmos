@@ -28,15 +28,15 @@ def scrape_sage():
             count = elements.count()
 
             for i in range(count):
-             if elements.nth(i).is_visible():
-                elements.nth(i).click()
-                page.wait_for_load_state("domcontentloaded")
-                print(f"Se hizo clic en el elemento {i+1}")
-                break
+                if elements.nth(i).is_visible():
+                    elements.nth(i).click()
+                    page.wait_for_load_state("domcontentloaded")
+                    print(f"Se hizo clic en el elemento {i+1}")
+                    break
             else:
-                print("No se encontró un elemento visible con el texto deseado.")    
+                print("No se encontró un elemento visible con el texto deseado.")
 
-             # Paso 4: Hacer clic en el botón de iniciar sesión con Google
+            # Paso 4: Hacer clic en el botón de iniciar sesión con Google
             google_login_button = "a#btn-google"
             page.click(google_login_button)
 
@@ -80,7 +80,7 @@ def scrape_sage():
                         print("El botón no es visible o no se puede interactuar con él.")
 
             except Exception as e:
-             print(f"Error al intentar aceptar las cookies: {e}")
+                print(f"Error al intentar aceptar las cookies: {e}")
 
             # Buscar artículos
             search_selector = "input[name='AllField']"
@@ -115,16 +115,17 @@ def scrape_sage():
 
             except Exception as e:
                 print(f"Error al intentar aceptar las cookies: {e}")
-            
+
             # Esperar que los resultados se carguen
             page.wait_for_selector(".rlist.search-result__body.items-results > div", timeout=60000)
             results = page.query_selector_all(".rlist.search-result__body.items-results > div")
-            print("articulos detectados")
+            print("Artículos detectados")
 
             # Guardar resultados en un archivo BibTeX
             filepath = os.path.join("Data", "resultados_Sage.bib")
             with open(filepath, mode="w", encoding="utf-8") as file:
-                for page_num in range(1, 5000):  # Iterar hasta la página 5000
+                # Segmento de iteración para avanzar por las páginas
+                for page_num in range(1, 5001):  # Iterar hasta la página 5000
                     print(f"Procesando página {page_num}...")
 
                     # Revalidar que los resultados están disponibles
@@ -155,33 +156,34 @@ def scrape_sage():
                         except Exception as e:
                             print(f"Error al procesar un resultado en la página {page_num}: {e}")
 
-                    # Avanzar a la siguiente página con reintentos
-                    retries = 3
-                    while retries > 0:
-                        try:
-                            # Seleccionar el botón "Siguiente"
+                    # Avanzar a la siguiente página usando el URL directamente
+                    try:
+                        # Si el número de página supera 200, construye el URL directamente
+                        if page_num >= 200:
+                            next_page_url = f"https://journals.sagepub.com/action/doSearch?AllField=computational+thinking&pageSize=10&startPage={page_num + 1}"
+                            print(f"Navegando directamente a la URL: {next_page_url}")
+                            page.goto(next_page_url)
+                        else:
+                            # Para las primeras páginas, intenta usar el botón "Siguiente"
                             next_button = page.query_selector("a[aria-label='next']")
                             if next_button:
-                                next_page_url = next_button.get_attribute("href")  # Captura la URL del siguiente enlace
+                                next_page_url = next_button.get_attribute("href")
                                 if next_page_url:
                                     print(f"Navegando a la URL de la página {page_num + 1}")
-                                    page.goto(next_page_url)  # Navegar directamente a la URL
-                                    page.wait_for_selector(".rlist.search-result__body.items-results > div", timeout=60000)
-                                    break
+                                    page.goto(next_page_url)
                                 else:
                                     print("No se encontró el enlace 'href' en el botón 'Siguiente'. Finalizando.")
-                                    return
+                                    break
                             else:
                                 print("No se encontró el botón 'Siguiente'. Finalizando.")
-                                return
-                        except Exception as e:
-                            retries -= 1
-                            print(f"Error al cargar la página {page_num + 1}: {e}. Reintentando... Intentos restantes: {retries}")
-                            time.sleep(5)
-                    else:
-                        print(f"No se pudo cargar la página {page_num + 1}. Finalizando.")
-                        break
+                                break
 
+                        # Esperar que los resultados de la nueva página se carguen
+                        page.wait_for_selector(".rlist.search-result__body.items-results > div", timeout=60000)
+
+                    except Exception as e:
+                        print(f"Error al cargar la página {page_num + 1}: {e}. Finalizando.")
+                        break
 
             print(f"Los artículos se guardaron exitosamente en {filepath}")
         except Exception as e:
