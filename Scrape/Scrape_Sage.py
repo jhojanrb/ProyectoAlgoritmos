@@ -42,14 +42,14 @@ def scrape_sage():
 
             # Paso 5: Ingresar el correo electrónico
             email_input_selector = "input#identifierId"
-            page.fill(email_input_selector, "jhojanr")
+            page.fill(email_input_selector, "jhoj")
             next_button_selector = "button:has-text('Siguiente')"
             page.click(next_button_selector)
             page.wait_for_load_state("domcontentloaded")
 
             # Paso 6: Ingresar la contraseña
             password_input_selector = "input[name='Passwd']"
-            page.fill(password_input_selector, "password")
+            page.fill(password_input_selector, "passwo")
             page.click(next_button_selector)
             page.wait_for_load_state("domcontentloaded")
             print("Login exitoso, listo para comenzar el scraping.")
@@ -142,7 +142,18 @@ def scrape_sage():
                             year_element = result.query_selector(".issue-item__header")
                             year = re.search(r'\b\d{4}\b', year_element.inner_text()).group(0) if year_element and re.search(r'\b\d{4}\b', year_element.inner_text()) else "Unknown"
                             journal = result.query_selector(".issue-item__row").inner_text() if result.query_selector(".issue-item__row") else "Unknown"
-                            abstract = result.query_selector(".issue-item__abstract__content").inner_text() if result.query_selector(".issue-item__abstract__content") else "Unknown"
+                            abstract = (
+                                        " ".join(
+                                            result.query_selector(".issue-item__abstract__content")
+                                            .inner_text()
+                                            .split()
+                                        ).strip()
+                                        if result.query_selector(".issue-item__abstract__content")
+                                        else "Unknown"
+                                    )
+
+
+
 
                             # Escribir en formato BibTeX
                             file.write(f"@article{{ref{page_num}_{i},\n")
