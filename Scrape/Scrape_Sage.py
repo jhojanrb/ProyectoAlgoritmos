@@ -3,6 +3,10 @@ import os
 import re
 import time
 
+# -------------------------------------------------------------
+# USO DE CHATGPT PARA LA ESTRUCTURA DE LOS SCRAPES
+# -------------------------------------------------------------
+
 def scrape_sage():
     # Crear la carpeta "Data" si no existe
     if not os.path.exists("Data"):

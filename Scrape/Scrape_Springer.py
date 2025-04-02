@@ -3,6 +3,10 @@ import os
 import re
 import time
 
+# -------------------------------------------------------------
+# USO DE CHATGPT PARA LA ESTRUCTURA DE LOS SCRAPES
+# -------------------------------------------------------------
+
 def scrape_springer_open():
     with sync_playwright() as p:
         start_time = time.time()
