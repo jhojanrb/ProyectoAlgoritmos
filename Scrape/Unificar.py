@@ -91,6 +91,9 @@ def save_bibtex(filename, articles):
     except Exception as e:
         print(f"Error al guardar el archivo {filename}: {e}")
 
+# -------------------------------------------------------------
+# USO DE CHATGPT PARA LA ESTRUCTURA DE GUARDADO
+# -------------------------------------------------------------
 
 def save_duplicates(filename, duplicates):
     """Guardar duplicados en formato BibTeX con información de las páginas compartidas."""
@@ -122,5 +125,5 @@ def save_duplicates(filename, duplicates):
         print(f"Error al guardar el archivo {filename}: {e}")
 
 
-# Ejemplo de uso
+# Pasamos los archivos bib con los datos para crear un solo archivo "Unificados"
 unify_results_from_files("Data/resultados_ACM.bib", "Data/resultados_ieee.bib", "Data/resultados_springer_open.bib", "Data/resultados_Sage.bib")

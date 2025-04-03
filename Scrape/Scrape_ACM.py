@@ -63,7 +63,7 @@ def scrape_acm():
             # Guardar resultados en un archivo BibTeX
             filepath = os.path.join("Data", "resultados_ACM.bib")
             with open(filepath, mode="w", encoding="utf-8") as file:
-                for page_num in range(1, 1001):  # Iterar hasta la página 1000
+                for page_num in range(1, 51):  # Iterar hasta la página 200
                     print(f"Procesando página {page_num}...")
 
                     # Revalidar que los resultados están disponibles

@@ -8,15 +8,57 @@ import time
 # -------------------------------------------------------------
 
 def scrape_ieee():
+
+    # Crear la carpeta "Data" si no existe
+    if not os.path.exists("Data"):
+        os.makedirs("Data")
+
     with sync_playwright() as p:
         start_time = time.time()
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
 
         try:
-            # Acceder a IEEE Xplore
-            page.goto("https://ieeexplore.ieee.org/")
-            page.wait_for_load_state("domcontentloaded")  # Esperar que el DOM esté listo
+
+            # Paso 1: Acceder a la página principal
+            page.goto("https://library.uniquindio.edu.co/databases")
+            page.wait_for_load_state("domcontentloaded")
+
+            # Paso 2: Hacer clic en "Fac. Ingeniería"
+            fac_ingenieria_selector = "div[data-content-listing-item='fac-ingenier-a']"
+            page.click(fac_ingenieria_selector)
+            page.wait_for_load_state("domcontentloaded")
+
+            # Paso 3: Hacer clic en "IEEXPLORER) "
+            elements = page.locator("//a[contains(@href, \"https://ieeexplore-ieee-org.crai.referencistas.com/Xplore/home.jsp\")]//span[contains(text(), \"IEEE (Institute of Electrical and Electronics Engineers) - (DESCUBRIDOR)\")]")
+            count = elements.count()
+
+            for i in range(count):
+                if elements.nth(i).is_visible():
+                    elements.nth(i).click()
+                    page.wait_for_load_state("domcontentloaded")
+                    print(f"Se hizo clic en el elemento {i+1}")
+                    break
+            else:
+                print("No se encontró un elemento visible con el texto deseado.")
+
+            # Paso 4: Hacer clic en el botón de iniciar sesión con Google
+            google_login_button = "a#btn-google"
+            page.click(google_login_button)
+
+            # Paso 5: Ingresar el correo electrónico
+            email_input_selector = "input#identifierId"
+            page.fill(email_input_selector, "jhoj")
+            next_button_selector = "button:has-text('Siguiente')"
+            page.click(next_button_selector)
+            page.wait_for_load_state("domcontentloaded")
+
+            # Paso 6: Ingresar la contraseña
+            password_input_selector = "input[name='Passwd']"
+            page.fill(password_input_selector, "constra")
+            page.click(next_button_selector)
+            page.wait_for_load_state("domcontentloaded")
+            print("Login exitoso, listo para comenzar el scraping.")
 
             # Buscar el término deseado
             search_selector = 'input[type="search"]'
