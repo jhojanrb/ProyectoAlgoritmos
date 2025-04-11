@@ -81,6 +81,19 @@ def scrape_springer_open():
                             journal_element = article.query_selector("em[data-test='journal-title']")
                             journal = journal_element.inner_text().strip() if journal_element else "Unknown"
 
+                            #Extraer tipo
+                            parent_span = article.query_selector('span[data-test="result-list"]')
+                            tipo = "Unknown"  # Valor por defecto
+
+                            if parent_span:
+                                full_text = parent_span.inner_text()
+                                if "Content type:" in full_text:
+                                    # Extrae el texto después de "Content type:" y limpia espacios/comillas
+                                    tipo = full_text.split("Content type:")[-1].strip().strip('"')
+
+                            #Extraer publisher (no tiene, aplicamos predeterminado)
+                            publisher = "Unknown"
+
                             # Extraer abstract
                             abstract_element = article.query_selector("p")
                             abstract = abstract_element.inner_text().strip() if abstract_element else "Unknown"
@@ -91,6 +104,8 @@ def scrape_springer_open():
                             file.write(f"  author = {{{authors}}},\n")
                             file.write(f"  year = {{{year}}},\n")
                             file.write(f"  journal = {{{journal}}},\n")
+                            file.write(f"  tipo = {{{tipo}}},\n")
+                            file.write(f"  publisher = {{{publisher}}},\n")
                             file.write(f"  abstract = {{{abstract}}},\n")
                             file.write(f"  url = {{{link}}}\n")
                             file.write("}\n\n")

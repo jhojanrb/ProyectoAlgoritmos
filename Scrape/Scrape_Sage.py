@@ -46,14 +46,14 @@ def scrape_sage():
 
             # Paso 5: Ingresar el correo electrónico
             email_input_selector = "input#identifierId"
-            page.fill(email_input_selector, "jhoj")
+            page.fill(email_input_selector, "jhojanr.ramirezb@uqvirtual.edu.co")
             next_button_selector = "button:has-text('Siguiente')"
             page.click(next_button_selector)
             page.wait_for_load_state("domcontentloaded")
 
             # Paso 6: Ingresar la contraseña
             password_input_selector = "input[name='Passwd']"
-            page.fill(password_input_selector, "passwo")
+            page.fill(password_input_selector, "zenitsu1099682")
             page.click(next_button_selector)
             page.wait_for_load_state("domcontentloaded")
             print("Login exitoso, listo para comenzar el scraping.")
@@ -146,6 +146,10 @@ def scrape_sage():
                             year_element = result.query_selector(".issue-item__header")
                             year = re.search(r'\b\d{4}\b', year_element.inner_text()).group(0) if year_element and re.search(r'\b\d{4}\b', year_element.inner_text()) else "Unknown"
                             journal = result.query_selector(".issue-item__row").inner_text() if result.query_selector(".issue-item__row") else "Unknown"
+
+                            tipo_element = result.query_selector(".issue-item-access + span")  # Hermano adyacente
+                            tipo = tipo_element.inner_text().strip() if tipo_element else "Unknown"
+
                             abstract = (
                                         " ".join(
                                             result.query_selector(".issue-item__abstract__content")
@@ -155,9 +159,11 @@ def scrape_sage():
                                         if result.query_selector(".issue-item__abstract__content")
                                         else "Unknown"
                                     )
+                            # Eliminar la palabra "Abstract" 
+                            if abstract.lower().startswith("abstract"):
+                                abstract = abstract[8:].strip()  # Elimina los primeros 8 caracteres ("Abstract" + espacio)
 
-
-
+                            publisher = "Unknown"
 
                             # Escribir en formato BibTeX
                             file.write(f"@article{{ref{page_num}_{i},\n")
@@ -165,6 +171,8 @@ def scrape_sage():
                             file.write(f"  author = {{{authors}}},\n")
                             file.write(f"  year = {{{year}}},\n")
                             file.write(f"  journal = {{{journal}}},\n")
+                            file.write(f"  tipo = {{{tipo}}},\n")
+                            file.write(f"  publisher = {{{publisher}}},\n")
                             file.write(f"  abstract = {{{abstract}}},\n")
                             file.write(f"  url = {{{'https://journals.sagepub.com' + link}}}\n")
                             file.write("}\n\n")

@@ -48,14 +48,14 @@ def scrape_ieee():
 
             # Paso 5: Ingresar el correo electrónico
             email_input_selector = "input#identifierId"
-            page.fill(email_input_selector, "jhoj")
+            page.fill(email_input_selector, "jhojanr.ramirezb@uqvirtual.edu.co")
             next_button_selector = "button:has-text('Siguiente')"
             page.click(next_button_selector)
             page.wait_for_load_state("domcontentloaded")
 
             # Paso 6: Ingresar la contraseña
             password_input_selector = "input[name='Passwd']"
-            page.fill(password_input_selector, "constra")
+            page.fill(password_input_selector, "zenitsu1099682")
             page.click(next_button_selector)
             page.wait_for_load_state("domcontentloaded")
             print("Login exitoso, listo para comenzar el scraping.")
@@ -107,7 +107,7 @@ def scrape_ieee():
                             author_element = result.query_selector(".text-base-md-lh")
                             authors = author_element.inner_text().replace("\n", " ").strip() if author_element else "Unknown"
 
-                            journal_element = result.query_selector(".fw-bold")
+                            journal_element = result.query_selector("div.description > a[xplhighlight]")
                             journal = journal_element.inner_text() if journal_element else "Unknown"
 
                             year_element = result.query_selector(".publisher-info-container")
@@ -118,6 +118,29 @@ def scrape_ieee():
                             else:
                                 year = "Unknown"
 
+                            tipo_elements = result.query_selector_all("span[xplhighlight]")
+                            tipo = "Unknown"
+
+                            for element in tipo_elements:
+                                text = element.inner_text().strip()
+                                # Excluir si contiene "Year:", "Volume:", "Issue:" O cualquier dígito (0-9)
+                                if not (
+                                    "Year:" in text 
+                                    or "Volume:" in text 
+                                    or "Issue:" in text 
+                                    or re.search(r'\d', text)  # Busca cualquier número
+                                ):
+                                    tipo = text
+                                    break
+
+                            # PUBLISHER
+                            publisher_element = result.query_selector("button[xplhighlight] span.title")  # Localiza el título "Publisher:"
+                            if publisher_element and "Publisher:" in publisher_element.inner_text():
+                                # Busca el siguiente span hermano que contiene el nombre (IEEE)
+                                publisher = publisher_element.query_selector("xpath=following-sibling::span[1]").inner_text().strip()
+                            else:
+                                publisher = "Unknown"
+
                             abstract_element = result.query_selector(".twist-container")
                             abstract = abstract_element.inner_text() if abstract_element else "Unknown"
 
@@ -127,6 +150,8 @@ def scrape_ieee():
                             file.write(f"  author = {{{authors}}},\n")
                             file.write(f"  year = {{{year}}},\n")
                             file.write(f"  journal = {{{journal}}},\n")
+                            file.write(f"  tipo = {{{tipo}}},\n")
+                            file.write(f"  publisher = {{{publisher}}},\n")
                             file.write(f"  abstract = {{{abstract}}},\n")
                             file.write(f"  url = {{{url}}}\n")
                             file.write("}\n\n")
