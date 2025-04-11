@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import os
+import numpy as np
+import pandas as pd
 
 def generate_and_save_charts(stats, output_folder):
     """Genera gráficos como imágenes PNG y los guarda en la carpeta especificada"""
@@ -79,24 +81,47 @@ def generate_and_save_charts(stats, output_folder):
     
     # 4. Gráfico de Top Journals por Tipo
     if 'top15_journals' in stats:
-        # Excluir columna 'Total' para el gráfico
-        plot_data = stats['top15_journals'].drop(columns=['Total'], errors='ignore').head(15)
+        # Primero obtener una copia de los datos sin la columna Total
+        plot_data = stats['top15_journals'].drop(columns=['Total'], errors='ignore').copy()
+        
+        # Calcular la suma por fila (total de publicaciones por journal)
+        plot_data['Sum'] = plot_data.sum(axis=1)
+        
+        # Ordenar por la suma total de mayor a menor
+        plot_data = plot_data.sort_values('Sum', ascending=True).head(15)
+        
+        # Eliminar la columna Sum antes de graficar
+        plot_data = plot_data.drop(columns=['Sum'])
         
         plt.figure(figsize=(14, 8))
-        plot_data.plot(
+        # Crear gráfico de barras horizontales apiladas
+        ax = plot_data.plot(
             kind='barh',
             stacked=True,
-            figsize=(14, 8),
-            color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+            color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd'],
+            width=0.8  # Ancho de las barras
         )
-        plt.title('Top 15 Journals por Tipo de Publicación', pad=20)
-        plt.xlabel('Número de Publicaciones')
-        plt.ylabel('Journal')
-        plt.legend(title='Tipo')
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_folder, 'top15_journals.png'), dpi=300)
+        
+        plt.title('Top 15 Journals por Tipo de Publicación', pad=20, fontsize=14)
+        plt.xlabel('Número de Publicaciones', fontsize=12)
+        plt.ylabel('Journal', fontsize=12)
+        
+        # Mejorar la leyenda
+        plt.legend(
+            title='Tipo',
+            bbox_to_anchor=(1.05, 1),
+            loc='upper left',
+            fontsize=10
+        )
+        
+        plt.savefig(
+            os.path.join(output_folder, 'top15_journals.png'),
+            dpi=300,
+            bbox_inches='tight'  # Para asegurar que la leyenda se incluya
+        )
         plt.close()
-    
+
+
     # 5. Gráfico de Top Publishers por Año
     if 'top15_publishers' in stats:
         # Excluir columna 'Total' para el gráfico
@@ -114,6 +139,5 @@ def generate_and_save_charts(stats, output_folder):
         plt.ylabel('Publisher')
         plt.legend(title='Año')
         plt.tight_layout()
-        plt.savefig(os.path.join(output_folder, 'top_publishers.png'), dpi=300)
+        plt.savefig(os.path.join(output_folder, 'top15_publishers.png'), dpi=300)
         plt.close()
-
