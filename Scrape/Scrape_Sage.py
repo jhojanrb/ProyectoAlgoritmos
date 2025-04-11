@@ -46,14 +46,14 @@ def scrape_sage():
 
             # Paso 5: Ingresar el correo electrónico
             email_input_selector = "input#identifierId"
-            page.fill(email_input_selector, "jhojanr.ramirezb@uqvirtual.edu.co")
+            page.fill(email_input_selector, "jhojanr")
             next_button_selector = "button:has-text('Siguiente')"
             page.click(next_button_selector)
             page.wait_for_load_state("domcontentloaded")
 
             # Paso 6: Ingresar la contraseña
             password_input_selector = "input[name='Passwd']"
-            page.fill(password_input_selector, "zenitsu1099682")
+            page.fill(password_input_selector, "contra")
             page.click(next_button_selector)
             page.wait_for_load_state("domcontentloaded")
             print("Login exitoso, listo para comenzar el scraping.")
