@@ -5,7 +5,7 @@ import sys
 # Agregar la carpeta raíz al sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from Model.limpieza_normalizacion import normalize_product_type, clean_journal_name
+from Requerimiento2.limpieza_normalizacion import normalize_product_type, clean_journal_name
 
 
 def generate_statistics(df):

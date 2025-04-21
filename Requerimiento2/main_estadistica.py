@@ -9,9 +9,9 @@ import os
 # Agregar la carpeta raíz al sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from Model.graficos import generate_and_save_charts
-from Model.limpieza_normalizacion import normalize_authors, clean_journal_name, normalize_product_type, parse_large_bib
-from Model.generar_estadisticas import generate_statistics, save_statistics
+from Requerimiento2.graficos import generate_and_save_charts
+from Requerimiento2.limpieza_normalizacion import normalize_authors, clean_journal_name, normalize_product_type, parse_large_bib
+from Requerimiento2.generar_estadisticas import generate_statistics, save_statistics
 
 def main():
     # Procesamiento del archivo
