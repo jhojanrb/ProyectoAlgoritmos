@@ -8,6 +8,13 @@ import sys
 import re
 import unicodedata
 from tqdm import tqdm
+import pandas as pd
+import matplotlib.cm as cm
+import numpy as np
+import matplotlib.patches as mpatches
+from itertools import combinations
+import matplotlib.patheffects as path_effects
+
 
 # Agregar la carpeta raíz al sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -79,23 +86,41 @@ def load_bibtex(file_path):
     return abstracts
 
 def count_keywords(abstracts, keywords_dict):
-    keyword_counts = Counter()
+    keyword_data = []  # Lista detallada con categoría
+    keyword_counts = Counter()  # Dict para conteo rápido compatible con funciones existentes
+
     for abstract in abstracts:
         abstract_lower = abstract.lower()
         for category, terms in keywords_dict.items():
             for term, synonyms in terms.items():
                 for synonym in synonyms:
                     if synonym.lower() in abstract_lower:
+                        # Actualizar lista detallada
+                        found = False
+                        for entry in keyword_data:
+                            if entry["Término"] == term and entry["Categoría"] == category:
+                                entry["Frecuencia"] += 1
+                                found = True
+                                break
+                        if not found:
+                            keyword_data.append({
+                                "Término": term,
+                                "Categoría": category,
+                                "Frecuencia": 1
+                            })
+                        # Actualizar contador rápido
                         keyword_counts[term] += 1
                         break  # Solo contar una vez por término principal
-    return keyword_counts
+    return keyword_data, keyword_counts
+
 
 # Paso 4: Generar una gráfica de barras
 def plot_bar_chart(keyword_counts):
 
-    # Ordenar los items por frecuencia y tomar los 10 primeros
-    sorted_items = sorted(keyword_counts.items(), key=lambda x: x[1], reverse=False)[:15]
-    keywords, counts = zip(*sorted_items)
+    top_10 = sorted(keyword_counts.items(), key=lambda x: x[1], reverse=True)[:20]
+    # Separar claves y valores
+    keywords = [item[0] for item in top_10]
+    counts = [item[1] for item in top_10]
 
     plt.figure(figsize=(12, 6))
     plt.barh(keywords, counts, color="skyblue")
@@ -119,32 +144,82 @@ def generate_wordcloud(keyword_counts):
     plt.savefig(os.path.join(ruta_graficos, "nube_palabras_clave.png"))
     plt.close()
 
-# Paso 6: Generar gráfico de co-ocurrencia
-def plot_cooccurrence_network(abstracts, keywords_dict):
-    G = nx.Graph()
-    for abstract in abstracts:
-        present_keywords = set()
-        for key, synonyms in keywords_dict.items():
-            if any(synonym.lower() in abstract.lower() for synonym in synonyms):
-                present_keywords.add(key)
-        for k1 in present_keywords:
-            for k2 in present_keywords:
-                if k1 != k2:
-                    if G.has_edge(k1, k2):
-                        G[k1][k2]["weight"] += 1
-                    else:
-                        G.add_edge(k1, k2, weight=1)
+# Función para leer palabras clave y categorías desde un archivo Excel
+def cargarPalabras_excel(file_path):
+    df = pd.read_excel(file_path)
+    keywords_by_category = df.groupby("Categoría")["Término"].apply(list).to_dict()
+    return keywords_by_category
 
-    plt.figure(figsize=(12, 12))
-    pos = nx.spring_layout(G, seed=42)
+# Paso 6: Generar gráfico de co-ocurrencia
+def plot_cooccurrence_network(keywords_by_category, min_cooccurrence=1):
+    """Generar gráfico de red de co-ocurrencia con categorías."""
+
+    G = nx.Graph()
+
+    # Contar co-ocurrencias
+    co_occurrence = Counter()
+    for category, keywords in keywords_by_category.items():
+        for kw1, kw2 in combinations(keywords, 2):
+            co_occurrence[(kw1, kw2)] += 1
+
+    # Paleta de colores más variada
+    category_list = list(keywords_by_category.keys())
+    color_map = {cat: plt.colormaps["Set3"].resampled(len(category_list))(i) for i, cat in enumerate(category_list)}
+
+    # Agregar nodos
+    for category, keywords in keywords_by_category.items():
+        for keyword in keywords:
+            if not G.has_node(keyword):
+                G.add_node(keyword, category=category)
+
+    # Agregar aristas
+    for (kw1, kw2), weight in co_occurrence.items():
+        if weight >= min_cooccurrence:
+            G.add_edge(kw1, kw2, weight=weight)
+
+    # Calcular tamaños por grado ponderado
+    degrees = dict(G.degree(weight="weight"))
+    max_degree = max(degrees.values()) if degrees else 1
+    sizes = {node: 100 + 1000 * (deg / max_degree) for node, deg in degrees.items()}
+
+    # Layout
+    pos = nx.spring_layout(G, k=2.2, iterations=100, seed=42)
+
+    plt.figure(figsize=(24, 20))
+
+    # Dibujar nodos
+    for category, color in color_map.items():
+        nodes = [n for n in G.nodes if G.nodes[n]["category"] == category]
+        node_sizes = [sizes[n] for n in nodes]
+        nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_size=node_sizes, node_color=[color]*len(nodes), alpha=0.9)
+
+    # Dibujar aristas
     weights = [G[u][v]["weight"] for u, v in G.edges()]
-    nx.draw_networkx_nodes(G, pos, node_size=700, node_color="skyblue")
-    nx.draw_networkx_edges(G, pos, width=weights, edge_color="gray")
-    nx.draw_networkx_labels(G, pos, font_size=12, font_color="black")
-    plt.title("Gráfico de Co-ocurrencia de Palabras Clave")
+    weights_scaled = [0.5 + w*0.3 for w in weights]
+    nx.draw_networkx_edges(G, pos, width=weights_scaled, edge_color="lightgray", alpha=0.6)
+
+    # Dibujar etiquetas
+    labels = {n: n for n in G.nodes()}
+    text = nx.draw_networkx_labels(G, pos, labels=labels, font_size=8)
+    for t in text.values():
+        t.set_path_effects([path_effects.withStroke(linewidth=2.5, foreground="white")])
+
+    # Crear parches de leyenda
+    legend_patches = [mpatches.Patch(color=color, label=category) for category, color in color_map.items()]
+    plt.legend(handles=legend_patches, title="Categorías", loc="lower left", fontsize=10, title_fontsize=11, frameon=True)
+
+    plt.title("Red de Co-Ocurrencia de Palabras Clave por Categorías", fontsize=18)
     plt.axis("off")
-    plt.savefig(os.path.join(ruta_graficos, "coocurrencia_palabras_clave.png"))
+    plt.tight_layout()
+    plt.savefig(os.path.join(ruta_graficos, "keyword network.png"))
     plt.close()
+
+# Paso 6: Guardar resultados en un archivo Excel
+
+def guardar_keywords_en_excel(keyword_data, output_path):
+    df = pd.DataFrame(keyword_data)
+    df = df.sort_values(by=["Categoría", "Frecuencia"], ascending=[True, False])
+    df.to_excel(output_path, index=False)
 
 # Paso 7: Integrar todo el flujo
 def main(bib_file_path):
@@ -158,7 +233,7 @@ def main(bib_file_path):
             return
         
         # Contar palabras clave
-        keyword_counts = count_keywords(abstracts, keywords)
+        keyword_data, keyword_counts = count_keywords(abstracts, keywords)
         
         if not keyword_counts:
             print("Advertencia: No se encontraron coincidencias con las palabras clave.")
@@ -169,11 +244,21 @@ def main(bib_file_path):
         print("\nFrecuencias de Palabras Clave:")
         for keyword, count in sorted(keyword_counts.items(), key=lambda x: x[1], reverse=True):
             print(f"{keyword}: {count}")
+
+        # Guardar resultados en Excel
+        output_excel = os.path.join(ruta_graficos, "frecuencia_keywords_categorizadas.xlsx")
+        guardar_keywords_en_excel(keyword_data, output_excel)
+        print(f"Archivo Excel guardado en: {output_excel}")
+
+        excel_path = "C:/2025-1/Analisis Algoritmos/Proyecto/Data/Datos Requerimiento3/frecuencia_keywords_categorizadas.xlsx"
+
+        # Cargar palabras clave desde el archivo Excel
+        keywords_by_category = cargarPalabras_excel(excel_path)
         
         # Graficar resultados
         plot_bar_chart(keyword_counts)
         generate_wordcloud(keyword_counts)
-        plot_cooccurrence_network(abstracts, keywords)
+        plot_cooccurrence_network(keywords_by_category)
         
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -182,6 +267,7 @@ def main(bib_file_path):
 if __name__ == "__main__":
     bib_file_path = "C:/2025-1/Analisis Algoritmos/Proyecto/Data/unificados.bib"
     ruta_graficos = "C:/2025-1/Analisis Algoritmos/Proyecto/Data/Datos Requerimiento3"
+    
     
     # Ejecutar el flujo principal
     main(bib_file_path)
