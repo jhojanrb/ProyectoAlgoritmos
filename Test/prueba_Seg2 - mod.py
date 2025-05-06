@@ -127,7 +127,7 @@ def doc2vec_similarity(abstracts, save_model=True):
     model.train(tagged_data, total_examples=model.corpus_count, epochs=model.epochs)
     
     if save_model:
-        model.save("doc2vec_model.model")  # Guardar modelo para reutilizar
+        model.save("C:/2025-1/Analisis Algoritmos/Proyecto/Data/Datos Requerimiento5/doc2vec_model.model")  # Guardar modelo para reutilizar
     
     # Calcular similitud solo para los top N más similares (ej: top 100)
     top_n = 1000
@@ -209,8 +209,8 @@ def compare_models_and_save(abstracts, top_k=5, tfidf_similarity_func=None, doc2
    
 
     # Guardar las similitudes en archivos CSV
-    tfidf_csv = "tfidf_similarities.csv"
-    doc2vec_csv = "doc2vec_similarities.csv"
+    tfidf_csv = "C:/2025-1/Analisis Algoritmos/Proyecto/Data/Datos Requerimiento5/tfidf_similarities.csv"
+    doc2vec_csv = "C:/2025-1/Analisis Algoritmos/Proyecto/Data/Datos Requerimiento5/doc2vec_similarities.csv"
 
     # TF-IDF: Guardar en formato DataFrame
     tfidf_df = pd.DataFrame(tfidf_sim, columns=[f"Abstract {i}" for i in range(len(abstracts))])
@@ -276,7 +276,7 @@ def create_dendrogram(similarity_matrix, labels=None):
     plt.title("Dendrograma de clustering jerárquico")
     plt.xlabel("Documentos")
     plt.ylabel("Distancia")
-    plt.savefig("dendrogram.png", dpi=300, bbox_inches='tight')
+    plt.savefig("C:/2025-1/Analisis Algoritmos/Proyecto/Data/Datos Requerimiento5/dendrogram.png", dpi=300, bbox_inches='tight')
 
 # dendograma con muestra de documentos
 def create_sampled_dendrogram(similarity_matrix, labels, sample_size=100):
@@ -309,7 +309,7 @@ def create_sampled_dendrogram(similarity_matrix, labels, sample_size=100):
     plt.title("Dendrograma de clustering jerárquico (muestra)")
     plt.xlabel("Documentos")
     plt.ylabel("Distancia")
-    plt.savefig("sampled_dendrogram100.png", dpi=300, bbox_inches='tight')
+    plt.savefig("C:/2025-1/Analisis Algoritmos/Proyecto/Data/Datos Requerimiento5/sampled_dendrogram100.png", dpi=300, bbox_inches='tight')
 
 def save_batch_results(matrix, batch_index, output_dir):
     """Guarda resultados por lotes como archivos .npy."""
@@ -355,7 +355,7 @@ def calculate_clusters(similarity_matrix, cutoff_distance):
     return clusters, linkage_matrix
 
 # Función para guardar el resumen de clusters en un archivo CSV
-def save_cluster_summary_to_csv(clusters, abstracts, output_file='cluster_summary.csv'):
+def save_cluster_summary_to_csv(clusters, abstracts, output_file='C:/2025-1/Analisis Algoritmos/Proyecto/Data/Datos Requerimiento5/cluster_summary.csv'):
     # Crear una lista para almacenar los datos
     cluster_data = []
 
@@ -379,7 +379,7 @@ def main():
     file_path = "C:/2025-1/Analisis Algoritmos/Proyecto/Data/unificados.bib"
     abstracts = load_bibtex(file_path)
     print(f"Cargando y procesando {len(abstracts)} abstracts...")
-    output_dir = "similarity_batches"
+    output_dir = "C:/2025-1/Analisis Algoritmos/Proyecto/Data/Datos Requerimiento5/similarity_batches"
     
     # Opción 1: Procesamiento completo (requiere recursos)
     """""
