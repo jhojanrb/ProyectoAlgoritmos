@@ -15,6 +15,9 @@ from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 import matplotlib.pyplot as plt
 from scipy.sparse import vstack
+from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
+from scipy.spatial.distance import pdist
+import pandas as pd
 
 
 nltk.download('stopwords')
@@ -70,7 +73,7 @@ def load_bibtex(file_path):
     for entry in entries:
         # Buscar abstract en diferentes variaciones de campo
         abstract = entry.get('abstract') or entry.get('abstr') or entry.get('summary')
-        if abstract:
+        if abstract and "unknown" not in abstract.lower():  # Filtrar "Unknown" (case insensitive)
             abstracts.append(abstract)
     
     print(f"\nSe encontraron {len(abstracts)} abstracts en el archivo.")
@@ -145,7 +148,7 @@ def batch_process(abstracts, batch_size=1000):
         tfidf_sim_batch = tfidf_similarity(batch)
         np.save(f"tfidf_sim_batch_{i}.npy", tfidf_sim_batch)
 
-def compare_models(abstracts, doc_index=0, top_k=5):
+"""def compare_models(abstracts, doc_index=0, top_k=5):
     # Ejemplo: Comparar los top K abstracts más similares según ambos modelos
     tfidf_sim = tfidf_similarity(abstracts)
     doc2vec_sim = doc2vec_similarity(abstracts)
@@ -162,7 +165,74 @@ def compare_models(abstracts, doc_index=0, top_k=5):
     # Top K según Doc2Vec
     print("\nTop similares (Doc2Vec):")
     for idx, sim in doc2vec_sim[doc_index][:top_k]:
-        print(f"Índice {int(idx)}: Sim={sim:.3f} - {abstracts[int(idx)][:100]}...")
+        print(f"Índice {int(idx)}: Sim={sim:.3f} - {abstracts[int(idx)][:100]}...")"""
+
+def compare_models_and_save(abstracts, top_k=5, tfidf_similarity_func=None, doc2vec_similarity_func=None):
+    # Calcular similitudes
+    tfidf_sim = tfidf_similarity_func(abstracts)
+    doc2vec_sim = doc2vec_similarity_func(abstracts)
+
+    # Determinar el abstract con más coincidencias (mayor suma de similitudes)
+    tfidf_sums = tfidf_sim.sum(axis=1)
+    doc2vec_sums = np.array([sum(sim[1] for sim in doc_sim) for doc_sim in doc2vec_sim])
+
+    # Suma total de todas las similitudes
+    tfidf_total_sum = tfidf_sums.sum()  # Suma de todas las similitudes en TF-IDF
+    doc2vec_total_sum = doc2vec_sums.sum()  # Suma de todas las similitudes en Doc2Vec
+
+    # Cantidad de documentos
+    total_docs = len(abstracts)
+
+    # Porcentajes totales de similitud
+    porcentaje_totaltfidf = (tfidf_total_sum / (total_docs * (total_docs - 1))) * 100
+    porcentaje_total2vec = (doc2vec_total_sum / (total_docs * (total_docs - 1))) * 100
+
+    most_similar_tfidf_index = np.argmax(tfidf_sums)
+    most_similar_doc2vec_index = np.argmax(doc2vec_sums)
+ 
+
+    # Resumen en consola
+    print("\nTF-IDF:")
+    print(f"Abstract con más coincidencias (índice {most_similar_tfidf_index}):")
+    print(abstracts[most_similar_tfidf_index][:200] + "...")
+    print(f"Suma total de similitudes: {tfidf_sums[most_similar_tfidf_index]:.3f}")
+    # Mostrar el porcentaje total de similitud
+    print(f"Porcentaje total de similitud: {porcentaje_totaltfidf:.2f}%")
+    
+
+    print("\nDoc2Vec:")
+    print(f"Abstract con más coincidencias (índice {most_similar_doc2vec_index}):")
+    print(abstracts[most_similar_doc2vec_index][:200] + "...")
+    print(f"Suma total de similitudes: {doc2vec_sums[most_similar_doc2vec_index]:.3f}")
+    # Mostrar el porcentaje total de similitud
+    print(f"Porcentaje total de similitud: {porcentaje_total2vec:.2f}%")
+   
+
+    # Guardar las similitudes en archivos CSV
+    tfidf_csv = "tfidf_similarities.csv"
+    doc2vec_csv = "doc2vec_similarities.csv"
+
+    # TF-IDF: Guardar en formato DataFrame
+    tfidf_df = pd.DataFrame(tfidf_sim, columns=[f"Abstract {i}" for i in range(len(abstracts))])
+    tfidf_df.insert(0, "Abstract", [f"Abstract {i}" for i in range(len(abstracts))])
+    tfidf_df.to_csv(tfidf_csv, index=False)
+
+    # Doc2Vec: Guardar similitudes
+    doc2vec_data = []
+    for i, sims in enumerate(doc2vec_sim):
+        for idx, sim in sims:
+            doc2vec_data.append({
+                "Abstract ID": f"Abstract {i}",
+                "Similar Abstract ID": f"Abstract {int(idx)}",
+                "Similarity": sim
+            })
+
+    doc2vec_df = pd.DataFrame(doc2vec_data)
+    doc2vec_df.to_csv(doc2vec_csv, index=False)
+
+    print(f"\nSimilitudes TF-IDF guardadas en: {tfidf_csv}")
+    print(f"Similitudes Doc2Vec guardadas en: {doc2vec_csv}")
+
 
     #--------------------------------------------------------------------#
 
@@ -216,12 +286,10 @@ def create_sampled_dendrogram(similarity_matrix, labels, sample_size=100):
     :param labels: Etiquetas de los documentos.
     :param sample_size: Tamaño de la muestra (número de documentos a considerar).
     """
-    # Validar que el tamaño de la muestra no exceda la cantidad total de documentos
     total_documents = len(labels)
     if sample_size > total_documents:
         sample_size = total_documents
 
-    # Seleccionar una muestra aleatoria
     sampled_indices = np.random.choice(total_documents, size=sample_size, replace=False)
     sampled_similarity_matrix = similarity_matrix[np.ix_(sampled_indices, sampled_indices)]
     sampled_labels = [labels[i] for i in sampled_indices]
@@ -254,6 +322,57 @@ def load_batch_results(output_dir):
     files = sorted([f for f in os.listdir(output_dir) if f.endswith('.npy')])
     matrices = [np.load(os.path.join(output_dir, f)) for f in files]
     return np.vstack(matrices)
+
+# Funciones auxiliares para clustering
+def calculate_clusters(similarity_matrix, cutoff_distance):
+    """
+    Calcula los clusters usando una matriz de similitud y una distancia de corte.
+    """
+    # Convertir similitud a distancia
+    distance_matrix = 1 - similarity_matrix
+    distance_matrix = (distance_matrix + distance_matrix.T) / 2
+    distance_matrix[distance_matrix < 0] = 0
+    np.fill_diagonal(distance_matrix, 0)
+    
+    # Generar linkage
+    linkage_matrix = linkage(squareform(distance_matrix), method='ward')
+    
+    # Generar clusters
+    cluster_labels = fcluster(linkage_matrix, t=cutoff_distance, criterion='distance')
+
+    clusters = {}
+    for doc_id, cluster_id in enumerate(cluster_labels):
+        if cluster_id not in clusters:
+            clusters[cluster_id] = []
+        clusters[cluster_id].append(doc_id)
+
+    #mostrar el tamaño de los clusters
+    print("Número de clusters generados:", len(clusters))
+    #cluster_sizes = {k: len(v) for k, v in clusters.size()}
+    #print("Distribución de tamaños de clusters:", cluster_sizes)
+
+
+    return clusters, linkage_matrix
+
+# Función para guardar el resumen de clusters en un archivo CSV
+def save_cluster_summary_to_csv(clusters, abstracts, output_file='cluster_summary.csv'):
+    # Crear una lista para almacenar los datos
+    cluster_data = []
+
+    # Recorrer cada cluster y resumir los datos
+    for cluster_id, abstract_indices in clusters.items():
+        cluster_texts = [abstracts[i] for i in abstract_indices]
+        cluster_summary = {
+            "Cluster ID": cluster_id,
+            "Número de Abstracts": len(abstract_indices),
+            "Ejemplo de Abstract": cluster_texts[0] if cluster_texts else ""
+        }
+        cluster_data.append(cluster_summary)
+    
+    # Crear un DataFrame y guardarlo como CSV
+    df = pd.DataFrame(cluster_data)
+    df.to_csv(output_file, index=False)
+    print(f"Resumen de clusters guardado en {output_file}")
 
 
 def main():
@@ -294,12 +413,22 @@ def main():
     end_time = time.time()
     print(f"Tiempo de generación de dendrograma: {end_time - start_time:.2f} segundos")
     # batch_process(abstracts)
+
+    # Calcular clusters en toda la matriz
+    print("\nCalculando clusters...")
+    cutoff_distance = 0.8  # Parámetro de corte para definir los clusters
+    clusters, _ = calculate_clusters(similarity_matrix, cutoff_distance)
+
+    # Guardar resumen de clusters en CSV
+    print("Guardando resumen de clusters")
+    save_cluster_summary_to_csv(clusters, abstracts)
     
     # Comparar resultados para un abstract específico
     print("\nComparando modelos...")
     #tiempo de comparacion
     start_time = time.time()
-    compare_models(abstracts, doc_index=0, top_k=10)
+    #compare_models(abstracts, doc_index=0, top_k=10)
+    compare_models_and_save(abstracts, top_k=10, tfidf_similarity_func=tfidf_similarity, doc2vec_similarity_func=doc2vec_similarity)
     end_time = time.time()
     print(f"\nTiempo de comparación: {end_time - start_time:.2f} segundos")
     
